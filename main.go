@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"os"
 )
 
 func main() {
@@ -34,6 +36,44 @@ func handleConnection(conn net.Conn) {
 
 	// TODO: Implement SOCKS5 protocol
 	// 1. Read client greeting and negotiate authentication method
+
+	header := make([]byte, 2)
+	_, err := io.ReadFull(conn, header)
+	if err != nil {
+		return
+	}
+
+	if header[0] != 0x05 {
+		return
+	}
+
+	nMethods := header[1]
+	methods := make([]byte, nMethods)
+	_, err = io.ReadFull(conn, methods)
+	if err != nil {
+		return
+	}
+
+	requiredMethod := byte(0x00)
+	if os.Getenv("PROXY_USER") != "" {
+		requiredMethod = 0x02
+	}
+
+	methodSupported := false
+	for _, m := range methods {
+		if m == requiredMethod {
+			methodSupported = true
+			break
+		}
+	}
+
+	if !methodSupported {
+		conn.Write([]byte{0x05, 0xFF})
+		return
+	}
+
+	conn.Write([]byte{0x05, requiredMethod})
+
 	// 2. Perform authentication if required (when PROXY_USER env var is set)
 	// 3. Read CONNECT request
 	// 4. Connect to target server
