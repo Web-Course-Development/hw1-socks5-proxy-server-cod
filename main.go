@@ -30,7 +30,7 @@ func main() {
 			log.Printf("accept error: %v", err)
 			continue
 		}
-
+		log.Printf("Accepted connection from: %v", conn.RemoteAddr())
 		go handleConnection(conn)
 	}
 }
@@ -152,6 +152,8 @@ func handleConnection(conn net.Conn) {
 	targetPort := binary.BigEndian.Uint16(portBuf)
 
 	target := fmt.Sprintf("%s:%d", targetAddr, targetPort)
+
+	log.Printf("Forwarding traffic to: %s", target)
 
 	destConn, err := net.Dial("tcp", target)
 	if err != nil {
